@@ -12,7 +12,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.3'
+          cpus: '0.2'
           memory: '0.6GB'
     networks:
       - app_network      
@@ -22,19 +22,7 @@ services:
     hostname: api1
     depends_on:
       - redis
-    networks:
-      - app_network
-    deploy:
-      resources:
-        limits:
-          cpus: '0.2'
-          memory: '0.5GB'
-
-  api2:
-    build: ./api
-    hostname: api2
-    depends_on:
-      - redis
+      - postgres
     networks:
       - app_network
     deploy:
@@ -43,12 +31,30 @@ services:
           cpus: '0.3'
           memory: '0.6GB'
 
+  api2:
+    build: ./api
+    hostname: api2
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - app_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: '0.6GB'
+
   postgres:
     image: postgres
+    hostname: postgres
     environment:
       POSTGRES_DB: rinha
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_LOG_STATEMENT: all
+      POSTGRES_LOG_DIRECTORY: /var/log/postgresql/
     volumes: 
       - ./sql/create_db.sql:/docker-entrypoint-initdb.d/create_db.sql
     networks:
@@ -56,7 +62,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: '0.7'
           memory: '0.8GB'
 
   redis:
@@ -68,9 +74,13 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.2'
+          cpus: '0.1'
           memory: '0.6GB'
 
 networks:
   app_network:
     driver: bridge
+
+volumes:
+  postgres_data:
+  postgres_logs:

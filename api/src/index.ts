@@ -27,6 +27,7 @@ app
     const pessoa = await sql`
       select * from pessoas where id = ${id}
     `
+
     if (pessoa.count > 0) {
         await client.set(`pessoa:${id}`, JSON.stringify(pessoa[0]));
     }
@@ -59,19 +60,11 @@ app
           return JSON.parse(cachedData);
       }
 
-      const queryTerm = `${query.t}`;
-      const sanitizedSearchTerm = queryTerm.replace(/\s+/g, ' ');
-      const terms = sanitizedSearchTerm.split(' ').map(term => `${term}:*`).join(' & ');
-      const formattedQuery = `${terms}`;
-
       const pessoas = await sql`
-        select *
-        from pessoas
-        where  
-          to_tsvector('english', apelido) @@ to_tsquery( 'english', ${formattedQuery})
-          or to_tsvector('english', nome) @@ to_tsquery( 'english', ${formattedQuery})
-          or to_tsvector(array_to_string(stack, '')) @@ to_tsquery( 'english', ${formattedQuery})
-        limit 50; 
+        SELECT id, nome, apelido, nascimento, stack
+        FROM pessoas
+        WHERE search ILIKE ${query.t}
+        LIMIT 50 
       `
       if (pessoas.count > 0) {
           // Store data in Redis cache
@@ -100,27 +93,31 @@ app
         }
       }
 
+      if(code !== "VALIDATION"){
+        console.log("error:   " + error.message)
+      }
+
       if(code === 'VALIDATION'){
 
         if(error.message.startsWith("Invalid body, 'apelido': Expected string")){
           set.status = 400
-          return {}
+          return "apelid"
         }
         if(error.message.startsWith("Invalid body, 'stack/")){
           set.status = 400
-          return {}
+          return "stack"
         }
         if(error.message.startsWith("Invalid body, 'nome': Expected string")){
           set.status = 400
-          return {}
+          return "nome"
         }
         if(error.message.startsWith("Invalid body, 'nascimento': Expected string")){
           set.status = 400
-          return {}
+          return "nascimento"
         }
         if(error.message.startsWith("Invalid body, 'stack': Expected array")){
           set.status = 400
-          return {}
+          return "array"
         }
 
         set.status = 422
@@ -139,9 +136,9 @@ app
     if(body.stack !== undefined){
       const allStringsWithinMaxLength = body.stack.every(str => str.length <= 32);
 
-      if (allStringsWithinMaxLength) {
+      if (!allStringsWithinMaxLength) {
         set.status = 400
-        return {}
+        return {message: "stack max lenght"}
       } 
     }
 
@@ -166,6 +163,7 @@ app
         returning
             id, nome, apelido, to_char(nascimento, 'YYYY-MM-DD') as nascimento, stack
       ` 
+
       await client.set(`pessoa:${pessoa[0].id}`, JSON.stringify(pessoa[0]));
       await client.set(`apelido:${pessoa[0].apelido}`, 'true');
       
@@ -189,6 +187,8 @@ app
       stack: t.Optional(t.Array(t.String({ maxLength: 32}), {minItems: 1}, )),
     }),
   })
+  .onRequest(({request}) => { console.log(`request: ${request.method} ${request.url} }` )})
+  .onResponse((c) => {console.log("response" + c.request)})
   .listen(3000)
 
 console.log(
