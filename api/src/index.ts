@@ -10,16 +10,10 @@ const client = new Redis({
 
 app
   .get("/pessoas/:id", async ({params: {id}, set}) => {
-    const regexExp = /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/gi;
-    if(!regexExp.test(id)){
-      return {}
-    }
 
     const cachedData = await client.get(`pessoa:${id}`);
-    if (cachedData) {
-        set.headers = {
-          'Content-Type': 'application/json'
-        } 
+    if (cachedData !== undefined) {
+
         
         return cachedData;
     }
@@ -38,9 +32,6 @@ app
         return {}
     }
 
-    set.headers = {
-      'Content-Type': 'application/json'
-    } 
 
     return pessoa[0]
   })
@@ -54,9 +45,7 @@ app
     if(typeof query.t === 'string'){
       const cachedData = await client.get(`pessoas:${query.t}`);
       if (cachedData) {
-          set.headers = {
-              'Content-Type': 'application/json'
-          };
+
           return JSON.parse(cachedData);
       }
 
@@ -70,9 +59,7 @@ app
           // Store data in Redis cache
           await client.set(`pessoas:${query.t}`, JSON.stringify(pessoas));
       }
-      set.headers = {
-        'Content-Type': 'application/json'
-      } 
+
       
       return pessoas 
     }
@@ -129,7 +116,7 @@ app
 
     const cachedData = await client.get(`apelido:${body.apelido}`);
     if (cachedData) {
-      set.status == 422
+      set.status = 422
       return { message: "Apelido já cadastrado"}
     } 
 
@@ -163,9 +150,11 @@ app
         returning
             id, nome, apelido, to_char(nascimento, 'YYYY-MM-DD') as nascimento, stack
       ` 
+      await Promise.all([
+        client.set(`pessoa:${pessoa[0].id}`, JSON.stringify(pessoa[0])),
+        client.set(`apelido:${pessoa[0].apelido}`, 'true')
+      ])
 
-      await client.set(`pessoa:${pessoa[0].id}`, JSON.stringify(pessoa[0]));
-      await client.set(`apelido:${pessoa[0].apelido}`, 'true');
       
       set.status = 201
       set.headers = {
@@ -174,21 +163,21 @@ app
       return {}
     }catch(e: any){
       if(e.message == 'duplicate key value violates unique constraint "pessoas_apelido_key"'){
-        set.status == 422
+        set.status = 422
         return { message: "Apelido já cadastrado"}
       }
     }
    }, 
    {
     body: t.Object({
-      nome: t.String({maxLength: 32}),
-      apelido: t.String({maxLength: 100}),
+      nome: t.String({maxLength: 100}),
+      apelido: t.String({maxLength: 32}),
       nascimento: t.String({format: 'date', default: 'YYYY-MM-DD'}),
       stack: t.Optional(t.Array(t.String({ maxLength: 32}), {minItems: 1}, )),
     }),
   })
-  .onRequest(({request}) => { console.log(`request: ${request.method} ${request.url} }` )})
-  .onResponse((c) => {console.log("response" + c.request)})
+  // .onRequest(({request}) => { console.log(`request: ${request.method} ${request.url} }` )})
+  // .onResponse((c) => {console.log("response" + c.request)})
   .listen(3000)
 
 console.log(

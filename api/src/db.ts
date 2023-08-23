@@ -5,7 +5,7 @@ const sql = postgres({
   host: 'postgres',
   database: 'rinha',
   password: 'admin',
-  max: 30,
+  max: 50,
 
 });
 

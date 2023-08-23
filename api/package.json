@@ -10,7 +10,8 @@
     "elysia": "latest",
     "ioredis": "^5.3.2",
     "pg": "^8.11.2",
-    "postgres": "^3.3.5"
+    "postgres": "^3.3.5",
+    "typia": "^4.3.2"
   },
   "devDependencies": {
     "bun-types": "latest"

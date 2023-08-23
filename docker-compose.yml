@@ -28,7 +28,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.3'
+          cpus: '0.4'
           memory: '0.6GB'
 
   api2:
@@ -42,7 +42,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.2'
+          cpus: '0.4'
           memory: '0.6GB'
 
   postgres:
@@ -62,7 +62,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.7'
+          cpus: '0.4'
           memory: '0.8GB'
 
   redis:
@@ -71,6 +71,8 @@ services:
       - "6379:6379"
     networks:
       - app_network
+    volumes:
+      - cache:/data  
     deploy:
       resources:
         limits:
@@ -84,3 +86,4 @@ networks:
 volumes:
   postgres_data:
   postgres_logs:
+  cache:
